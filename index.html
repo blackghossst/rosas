@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramo de Rosas Elegante</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Playfair Display', 'Georgia', serif;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #2c1810 0%, #0a0605 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            perspective: 1000px;
+        }
+
+        canvas {
+            display: block;
+            filter: drop-shadow(0 30px 80px rgba(0, 0, 0, 0.8));
+            cursor: grab;
+            transition: filter 0.3s;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        canvas:hover {
+            filter: drop-shadow(0 35px 90px rgba(0, 0, 0, 0.9));
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+        }
+
+        .title {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #d4af37;
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.3);
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeIn 2s forwards 0.5s;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .subtitle {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(212, 175, 55, 0.7);
+            font-size: 16px;
+            letter-spacing: 3px;
+            font-weight: 300;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeIn 2s forwards 1s;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            opacity: 0;
+            animation: fadeIn 2s forwards 1.5s;
+        }
+
+        button {
+            background: linear-gradient(145deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            color: #d4af37;
+            padding: 15px 35px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            border-color: rgba(212, 175, 55, 0.6);
+            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.2), 0 0 30px rgba(212, 175, 55, 0.1);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+        }
+
+        button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.6), transparent);
+            border-radius: 50%;
+            animation: float linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .info {
+            position: absolute;
+            top: 50%;
+            right: 40px;
+            transform: translateY(-50%);
+            color: rgba(212, 175, 55, 0.5);
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-align: right;
+            line-height: 2;
+            opacity: 0;
+            animation: fadeIn 2s forwards 2s;
+        }
+
+        .info div {
+            margin: 10px 0;
+            transition: color 0.3s;
+        }
+
+        .info div:hover {
+            color: rgba(212, 175, 55, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="overlay"></div>
+    
+    <div class="title">Eternal Roses</div>
+    <div class="subtitle">— Un regalo de amor eterno —</div>
+    
+    <canvas id="canvas"></canvas>
+
+    <div class="controls">
+        <button onclick="regenerateBouquet()">
+            <span>✨ Nuevo Ramo</span>
+        </button>
+        <button onclick="toggleRotation()">
+            <span id="rotateBtn">🌀 Rotar</span>
+        </button>
+        <button onclick="changeStyle()">
+            <span>🎨 Estilo</span>
+        </button>
+    </div>
+
+    <div class="info">
+        <div>🖱️ ARRASTRA PARA ROTAR</div>
+        <div>🌹 12 ROSAS ARTESANALES</div>
+        <div>💎 HECHO CON AMOR</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 1000;
+        canvas.height = 1000;
+
+        let roses = [];
+        let rotationAngle = 0;
+        let autoRotate = true;
+        let isDragging = false;
+        let lastMouseX = 0;
+        let styleMode = 0; // 0: realista, 1: artístico, 2: minimalista
+        let time = 0;
+
+        // Crear partículas de fondo
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 15 + 10) + 's';
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        class Rose {
+            constructor(x, y, z, color, size, angle) {
+                this.baseX = x;
+                this.baseY = y;
+                this.z = z;
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = size;
+                this.angle = angle;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.petalCount = 8;
+                this.layerCount = 6;
+                this.stemCurve = (Math.random() - 0.5) * 40;
+                this.swayPhase = Math.random() * Math.PI * 2;
+                this.bloomProgress = 0;
+                this.targetBloom = 1;
+                this.petalVariations = Array.from({length: this.petalCount}, () => Math.random() * 0.2 + 0.9);
+            }
+
+            update(deltaTime) {
+                this.bloomProgress += (this.targetBloom - this.bloomProgress) * 0.02;
+            }
+
+            project3D(x, y, z, rotY) {
+                const cosY = Math.cos(rotY);
+                const sinY = Math.sin(rotY);
+                
+                const x3d = x * cosY - z * sinY;
+                const z3d = x * sinY + z * cosY;
+                
+                const scale = 800 / (800 + z3d);
+                const x2d = x3d * scale + canvas.width / 2;
+                const y2d = y * scale + canvas.height / 2;
+                
+                return { x: x2d, y: y2d, scale: scale, depth: z3d };
+            }
+
+            drawStem(projected, sway) {
+                const stemStart = this.project3D(this.baseX, this.baseY + 100, this.z, rotationAngle);
+                const stemEnd = projected;
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, 1 - projected.depth / 400);
+                
+                // Sombra del tallo
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 6 * projected.scale;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(stemStart.x + 2, stemStart.y + 2);
+                ctx.quadraticCurveTo(
+                    stemEnd.x + this.stemCurve * projected.scale + sway + 2,
+                    (stemStart.y + stemEnd.y) / 2 + 2,
+                    stemEnd.x + sway + 2,
+                    stemEnd.y + 2
+                );
+                ctx.stroke();
+
+                // Tallo principal con gradiente
+                const gradient = ctx.createLinearGradient(stemStart.x, stemStart.y, stemEnd.x, stemEnd.y);
+                gradient.addColorStop(0, '#1a4d1a');
+                gradient.addColorStop(0.5, '#2d6b2d');
+                gradient.addColorStop(1, '#1f5a1f');
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 5 * projected.scale;
+                ctx.beginPath();
+                ctx.moveTo(stemStart.x, stemStart.y);
+                ctx.quadraticCurveTo(
+                    stemEnd.x + this.stemCurve * projected.scale + sway,
+                    (stemStart.y + stemEnd.y) / 2,
+                    stemEnd.x + sway,
+                    stemEnd.y
+                );
+                ctx.stroke();
+
+                // Detalles del tallo (espinas)
+                for (let i = 0; i < 4; i++) {
+                    const t = (i + 1) / 5;
+                    const thornX = stemStart.x * (1 - t) + (stemEnd.x + sway) * t;
+                    const thornY = stemStart.y * (1 - t) + stemEnd.y * t;
+                    
+                    ctx.fillStyle = '#0d3d0d';
+                    ctx.beginPath();
+                    ctx.moveTo(thornX, thornY);
+                    ctx.lineTo(thornX + 3 * projected.scale, thornY - 4 * projected.scale);
+                    ctx.lineTo(thornX + 1 * projected.scale, thornY);
+                    ctx.fill();
+                }
+
+                // Hojas con más detalle
+                [0.3, 0.5, 0.7].forEach((pos, idx) => {
+                    const t = pos;
+                    const leafX = stemStart.x * (1 - t) + (stemEnd.x + sway) * t;
+                    const leafY = stemStart.y * (1 - t) + stemEnd.y * t;
+                    const direction = idx % 2 === 0 ? 1 : -1;
+
+                    ctx.save();
+                    ctx.translate(leafX, leafY);
+                    ctx.rotate(direction * 0.7 + sway * 0.01);
+
+                    // Sombra de hoja
+                    const leafGradient = ctx.createRadialGradient(2, 2, 0, 2, 2, 25 * projected.scale);
+                    leafGradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+                    leafGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = leafGradient;
+                    ctx.beginPath();
+                    ctx.ellipse(2, 2, 12 * projected.scale, 22 * projected.scale, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Hoja principal
+                    const leafColorGrad = ctx.createLinearGradient(-10 * projected.scale, -20 * projected.scale, 10 * projected.scale, 20 * projected.scale);
+                    leafColorGrad.addColorStop(0, '#3d8b3d');
+                    leafColorGrad.addColorStop(0.5, '#4fa84f');
+                    leafColorGrad.addColorStop(1, '#2d6b2d');
+                    
+                    ctx.fillStyle = leafColorGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 10 * projected.scale, 20 * projected.scale, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Vena central
+                    ctx.strokeStyle = 'rgba(26, 77, 26, 0.6)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -18 * projected.scale);
+                    ctx.lineTo(0, 18 * projected.scale);
+                    ctx.stroke();
+
+                    // Venas secundarias
+                    for (let v = -1; v <= 1; v += 2) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, v * 10 * projected.scale);
+                        ctx.lineTo(v * 7 * projected.scale, v * 15 * projected.scale);
+                        ctx.stroke();
+                    }
+
+                    ctx.restore();
+                });
+
+                ctx.restore();
+            }
+
+            drawRose(projected, sway) {
+                ctx.save();
+                ctx.translate(projected.x + sway, projected.y);
+                ctx.rotate(this.angle + sway * 0.01);
+                ctx.scale(projected.scale * this.size, projected.scale * this.size);
+                ctx.globalAlpha = Math.max(0, 1 - projected.depth / 400);
+
+                const bloom = this.bloomProgress;
+
+                // Cáliz (base verde)
+                ctx.save();
+                ctx.translate(0, 15);
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI * 2 / 5) * i;
+                    ctx.save();
+                    ctx.rotate(angle);
+                    
+                    const calyxGrad = ctx.createLinearGradient(0, 0, 0, 20);
+                    calyxGrad.addColorStop(0, '#4a7c2c');
+                    calyxGrad.addColorStop(1, '#2d4d1a');
+                    ctx.fillStyle = calyxGrad;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.quadraticCurveTo(-5, 10, -3, 20);
+                    ctx.quadraticCurveTo(0, 18, 3, 20);
+                    ctx.quadraticCurveTo(5, 10, 0, 0);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#1a3d0a';
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                ctx.restore();
+
+                // Pétalos por capas (de exterior a interior)
+                for (let layer = this.layerCount - 1; layer >= 0; layer--) {
+                    const layerProgress = layer / (this.layerCount - 1);
+                    const petalCount = this.petalCount - Math.floor(layer / 2);
+                    const radius = (25 - layer * 3.5) * bloom;
+                    const petalLength = (35 - layer * 4) * bloom;
+                    const petalWidth = (18 - layer * 2) * bloom;
+                    const curl = 0.2 + layerProgress * 0.3;
+
+                    for (let i = 0; i < petalCount; i++) {
+                        const angle = (Math.PI * 2 / petalCount) * i + layer * 0.4 + this.rotation;
+                        const variation = this.petalVariations[i % this.petalVariations.length];
+
+                        ctx.save();
+                        ctx.rotate(angle);
+                        ctx.translate(0, -radius);
+                        ctx.rotate(curl);
+
+                        // Sombra del pétalo
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetX = 3;
+                        ctx.shadowOffsetY = 3;
+
+                        // Gradiente complejo del pétalo
+                        const petalGrad = ctx.createRadialGradient(0, petalLength * 0.4, 0, 0, petalLength * 0.4, petalLength);
+                        
+                        if (this.color === 'red') {
+                            const darkness = layerProgress;
+                            if (styleMode === 0) {
+                                petalGrad.addColorStop(0, `rgba(${200 - darkness * 60}, ${20}, ${30}, 1)`);
+                                petalGrad.addColorStop(0.3, `rgba(${230 - darkness * 50}, ${25}, ${40}, 1)`);
+                                petalGrad.addColorStop(0.7, `rgba(${200 - darkness * 40}, ${25}, ${35}, 1)`);
+                                petalGrad.addColorStop(1, `rgba(${120 - darkness * 30}, ${10}, ${20}, 1)`);
+                            } else if (styleMode === 1) {
+                                petalGrad.addColorStop(0, `rgba(${255 - darkness * 40}, ${60}, ${80}, 1)`);
+                                petalGrad.addColorStop(0.5, `rgba(${220 - darkness * 30}, ${40}, ${60}, 1)`);
+                                petalGrad.addColorStop(1, `rgba(${150 - darkness * 20}, ${30}, ${50}, 1)`);
+                            } else {
+                                petalGrad.addColorStop(0, `rgba(${180}, ${30}, ${40}, 1)`);
+                                petalGrad.addColorStop(1, `rgba(${140}, ${20}, ${30}, 1)`);
+                            }
+                        } else {
+                            const darkness = layerProgress;
+                            if (styleMode === 0) {
+                                petalGrad.addColorStop(0, `rgba(${255}, ${250 - darkness * 20}, ${250 - darkness * 20}, 1)`);
+                                petalGrad.addColorStop(0.5, `rgba(${245 - darkness * 15}, ${240 - darkness * 15}, ${245 - darkness * 15}, 1)`);
+                                petalGrad.addColorStop(1, `rgba(${220 - darkness * 25}, ${215 - darkness * 25}, ${220 - darkness * 25}, 1)`);
+                            } else if (styleMode === 1) {
+                                petalGrad.addColorStop(0, `rgba(${255}, ${245}, ${250}, 1)`);
+                                petalGrad.addColorStop(0.7, `rgba(${240}, ${230}, ${240}, 1)`);
+                                petalGrad.addColorStop(1, `rgba(${200}, ${195}, ${205}, 1)`);
+                            } else {
+                                petalGrad.addColorStop(0, `rgba(${240}, ${240}, ${245}, 1)`);
+                                petalGrad.addColorStop(1, `rgba(${200}, ${200}, ${210}, 1)`);
+                            }
+                        }
+
+                        // Dibujar pétalo con forma orgánica
+                        ctx.fillStyle = petalGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        
+                        const leftCurve = petalWidth * 0.5 * variation;
+                        const rightCurve = petalWidth * 0.5 * variation;
+                        
+                        ctx.bezierCurveTo(
+                            -leftCurve, petalLength * 0.2,
+                            -leftCurve * 0.8, petalLength * 0.7,
+                            -petalWidth * 0.25, petalLength * variation
+                        );
+                        ctx.quadraticCurveTo(
+                            0, petalLength * 1.05 * variation,
+                            petalWidth * 0.25, petalLength * variation
+                        );
+                        ctx.bezierCurveTo(
+                            rightCurve * 0.8, petalLength * 0.7,
+                            rightCurve, petalLength * 0.2,
+                            0, 0
+                        );
+                        ctx.fill();
+
+                        // Borde del pétalo
+                        ctx.shadowColor = 'transparent';
+                        ctx.strokeStyle = this.color === 'red' ? 
+                            `rgba(${80 - layerProgress * 20}, 5, 10, 0.4)` : 
+                            `rgba(${180 - layerProgress * 30}, ${175 - layerProgress * 30}, ${185 - layerProgress * 30}, 0.5)`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+
+                        // Venas del pétalo
+                        if (styleMode === 0) {
+                            ctx.strokeStyle = this.color === 'red' ? 
+                                `rgba(100, 10, 20, 0.2)` : 
+                                `rgba(200, 195, 205, 0.3)`;
+                            ctx.lineWidth = 0.5;
+                            
+                            for (let v = 0; v < 3; v++) {
+                                const veinCurve = (v - 1) * petalWidth * 0.15;
+                                ctx.beginPath();
+                                ctx.moveTo(0, 0);
+                                ctx.quadraticCurveTo(veinCurve, petalLength * 0.5, veinCurve * 0.5, petalLength * 0.9);
+                                ctx.stroke();
+                            }
+                        }
+
+                        ctx.restore();
+                    }
+                }
+
+                // Centro de la rosa con textura
+                const centerRadius = 8 * bloom;
+                const centerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, centerRadius);
+                
+                if (this.color === 'red') {
+                    centerGrad.addColorStop(0, '#5d0000');
+                    centerGrad.addColorStop(0.5, '#8B0000');
+                    centerGrad.addColorStop(1, '#3d0000');
+                } else {
+                    centerGrad.addColorStop(0, '#e8e8e8');
+                    centerGrad.addColorStop(0.5, '#f5f5f5');
+                    centerGrad.addColorStop(1, '#d0d0d0');
+                }
+
+                ctx.fillStyle = centerGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, centerRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Estambres
+                if (styleMode === 0) {
+                    for (let i = 0; i < 12; i++) {
+                        const angle = (Math.PI * 2 / 12) * i;
+                        const len = centerRadius * 0.7;
+                        
+                        ctx.strokeStyle = this.color === 'red' ? 
+                            'rgba(255, 200, 100, 0.6)' : 
+                            'rgba(255, 220, 150, 0.5)';
+                        ctx.lineWidth = 0.8;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(Math.cos(angle) * len, Math.sin(angle) * len);
+                        ctx.stroke();
+
+                        ctx.fillStyle = this.color === 'red' ? 
+                            'rgba(255, 200, 50, 0.8)' : 
+                            'rgba(255, 230, 100, 0.7)';
+                        ctx.beginPath();
+                        ctx.arc(Math.cos(angle) * len, Math.sin(angle) * len, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+            }
+
+            draw(sway) {
+                const projected = this.project3D(this.baseX, this.baseY, this.z, rotationAngle);
+                this.x = projected.x;
+                this.y = projected.y;
+                this.depth = projected.depth;
+                
+                this.drawStem(projected, sway);
+                this.drawRose(projected, sway);
+            }
+        }
+
+        function createBouquet() {
+            roses = [];
+            
+            const arrangements = [
+                // Centro
+                { x: 0, y: -100, z: 0, size: 1.3 },
+                // Anillo interior
+                { x: -70, y: -80, z: 40, size: 1.15 },
+                { x: 70, y: -80, z: -40, size: 1.15 },
+                { x: 0, y: -60, z: 70, size: 1.1 },
+                { x: -50, y: -50, z: -60, size: 1.1 },
+                { x: 50, y: -50, z: 60, size: 1.1 },
+                // Anillo exterior
+                { x: -100, y: -40, z: 20, size: 1.0 },
+                { x: 100, y: -40, z: -20, size: 1.0 },
+                { x: -80, y: -30, z: -80, size: 0.95 },
+                { x: 80, y: -30, z: 80, size: 0.95 },
+                { x: 0, y: -20, z: -100, size: 0.9 },
+                { x: 0, y: -20, z: 100, size: 0.9 },
+            ];
+
+            arrangements.forEach((pos, idx) => {
+                const color = idx % 2 === 0 ? 'red' : 'white';
+                const angle = Math.random() * Math.PI * 2;
+                const rose = new Rose(pos.x, pos.y, pos.z, color, pos.size, angle);
+                roses.push(rose);
+            });
+        }
+
+        function drawBouquetWrapper() {
+            // Sombra del envoltorio
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height * 0.75);
+            
+            const shadowGrad = ctx.createRadialGradient(0, 50, 0, 0, 50, 200);
+            shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+            shadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = shadowGrad;
+            ctx.beginPath();
+            ctx.ellipse(0, 50, 180, 40, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Papel kraft con textura
+            const paperGrad = ctx.createLinearGradient(-200, 0, 200, 200);
+            paperGrad.addColorStop(0, '#d4b896');
+            paperGrad.addColorStop(0.5, '#c9a882');
+            paperGrad.addColorStop(1, '#b89968');
+            ctx.fillStyle = paperGrad;
+            
+            ctx.beginPath();
+            ctx.moveTo(-160, 0);
+            ctx.lineTo(-180, 150);
+            ctx.quadraticCurveTo(-150, 180, 0, 200);
+            ctx.quadraticCurveTo(150, 180, 180, 150);
+            ctx.lineTo(160, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // Textura del papel
+            ctx.strokeStyle = 'rgba(139, 119, 91, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 30; i++) {
+                const x = -150 + Math.random() * 300;
+                const y = Math.random() * 180;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.random() * 20 - 10, y + Math.random() * 10);
+                ctx.stroke();
+            }
+
+            // Borde del papel
+            ctx.strokeStyle = '#8b7750';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-160, 0);
+            ctx.lineTo(-180, 150);
+            ctx.quadraticCurveTo(-150, 180, 0, 200);
+            ctx.quadraticCurveTo(150, 180, 180, 150);
+            ctx.lineTo(160, 0);
+            ctx.stroke();
+
+            // Lazo dorado elegante
+            const ribbonGrad = ctx.createLinearGradient(-60, 30, 60, 70);
+            ribbonGrad.addColorStop(0, '#e6c35c');
+            ribbonGrad.addColorStop(0.5, '#d4af37');
+            ribbonGrad.addColorStop(1, '#c19a2e');
+
+            // Lazo izquierdo
+            ctx.fillStyle = ribbonGrad;
+            ctx.beginPath();
+            ctx.ellipse(-50, 50, 45, 25, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#a8861f';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Lazo derecho
+            ctx.beginPath();
+            ctx.ellipse(50, 50, 45, 25, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Centro del lazo
+            ctx.beginPath();
+            ctx.arc(0, 50, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#a8861f';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Brillo en el lazo
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(-50, 45, 15, 8, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(50, 45, 15, 8, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cintas colgantes con movimiento
+            const ribbonSway = Math.sin(time * 2) * 3;
+            
+            [-25, 25].forEach((offset, idx) => {
+                const sway = idx === 0 ? ribbonSway : -ribbonSway;
+                ctx.fillStyle = ribbonGrad;
+                ctx.beginPath();
+                ctx.moveTo(offset - 8, 65);
+                ctx.quadraticCurveTo(offset - 10 + sway, 120, offset - 15 + sway, 180);
+                ctx.lineTo(offset - 5 + sway, 180);
+                ctx.quadraticCurveTo(offset - 5 + sway * 0.7, 120, offset, 65);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Brillo en las cintas
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(offset - 6, 70);
+                ctx.lineTo(offset - 7 + sway * 0.5, 120);
+                ctx.lineTo(offset - 5 + sway * 0.5, 120);
+                ctx.lineTo(offset - 4, 70);
+                ctx.fill();
+            });
+
+            // Etiqueta decorativa
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(-40, 90, 80, 30, 5);
+            ctx.fill();
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'italic 12px Georgia';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Para ti ♥', 0, 105);
+
+            ctx.restore();
+        }
+
+        function drawBackground() {
+            // Fondo radial suave
+            const bgGrad = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 0,
+                canvas.width / 2, canvas.height / 2, canvas.width * 0.8
+            );
+            bgGrad.addColorStop(0, '#2a2a2a');
+            bgGrad.addColorStop(0.5, '#1a1a1a');
+            bgGrad.addColorStop(1, '#0a0a0a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Viñeta sutil
+            const vignetteGrad = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, canvas.width * 0.3,
+                canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+            );
+            vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vignetteGrad.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+            ctx.fillStyle = vignetteGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function animate(timestamp) {
+            time = timestamp * 0.001;
+            
+            drawBackground();
+
+            const sway = Math.sin(time * 0.8) * 2;
+
+            if (autoRotate) {
+                rotationAngle += 0.003;
+            }
+
+            roses.forEach(rose => {
+                rose.update(timestamp);
+            });
+
+            roses.sort((a, b) => b.depth - a.depth);
+
+            roses.forEach(rose => {
+                rose.draw(sway);
+            });
+
+            drawBouquetWrapper();
+
+            requestAnimationFrame(animate);
+        }
+
+        function regenerateBouquet() {
+            createBouquet();
+            roses.forEach(rose => {
+                rose.bloomProgress = 0;
+                rose.targetBloom = 1;
+            });
+        }
+
+        function toggleRotation() {
+            autoRotate = !autoRotate;
+            document.getElementById('rotateBtn').textContent = autoRotate ? '⏸️ Pausar' : '▶️ Rotar';
+        }
+
+        function changeStyle() {
+            styleMode = (styleMode + 1) % 3;
+            const styles = ['Realista', 'Artístico', 'Minimalista'];
+            const button = event.target;
+            button.innerHTML = `<span>🎨 ${styles[styleMode]}</span>`;
+        }
+
+        // Interacción con mouse para rotar
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            autoRotate = false;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastMouseX;
+                rotationAngle += deltaX * 0.01;
+                lastMouseX = e.clientX;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            canvas.style.cursor = 'grab';
+        });
+
+        // Touch para móviles
+        let lastTouchX = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            lastTouchX = e.touches[0].clientX;
+            autoRotate = false;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                const deltaX = e.touches[0].clientX - lastTouchX;
+                rotationAngle += deltaX * 0.01;
+                lastTouchX = e.touches[0].clientX;
+            }
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // Inicializar
+        createParticles();
+        createBouquet();
+        animate(0);
+    </script>
+</body>
+</html>
